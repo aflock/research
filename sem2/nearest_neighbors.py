@@ -54,7 +54,10 @@ samples = pickle.load(DATA_FILE)
 shuffle(samples)
 num_s = len(samples)
 
-one_twelfth = len/12
+
+training_set = samples[:num_s/2]
+remainder = samples[num_s/2:]
+test_set = remainder[:len(remainder)/6]
 
 def main():
     """runs nearest neighbors """
@@ -69,11 +72,11 @@ def nearest_neighbors(sample, k):
     :returns: the neighbors themselves
         (since we may want to show them, we will do the voting in main)
     """
-
+    scores = {}
     for t_sample in training_set:
-        dist = numpy.linalg.norm(sample[0]-t_sample[0])
+        dist = np.linalg.norm(sample[0]-t_sample[0])
+        scores[t_sample] = dist
 
-
-
-
-    pass
+    list =  sorted(training_set, key=scores.__getitem__).reverse()
+    list.reverse()
+    return list[:k]
