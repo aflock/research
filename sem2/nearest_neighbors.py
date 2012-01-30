@@ -1,14 +1,8 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-#imports
-import sys, os
-import numpy as np
-import pickle
 
-# TODO: fill this in plz VV (01/29/12, 21:42, AFlock)
-DATA_FILE = "./data.p"
-'''
+'''#{{{
 File: nearest_neighbors.py
 Author: AFlock
 Description: Nearest neighbors algorithm for classification of Cosmic Ray pixels in HST images
@@ -45,11 +39,25 @@ Nearest Neighbors(sample, k):
         if d < kth best d:
             update kth best
     return kbest
-'''
+'''#}}}
+
+#imports
+import sys, os
+import numpy as np
+from random import shuffle
+import pickle
+
+#load samples
+# TODO: fill this in plz VV (01/29/12, 21:42, AFlock)
+DATA_FILE = open("./data.p", "rb")
+samples = pickle.load(DATA_FILE)
+shuffle(samples)
+num_s = len(samples)
+
+one_twelfth = len/12
+
 def main():
     """runs nearest neighbors """
-    #get data
-    samples = pickle.load("DATA_FILE")
 
     pass
 
@@ -61,5 +69,11 @@ def nearest_neighbors(sample, k):
     :returns: the neighbors themselves
         (since we may want to show them, we will do the voting in main)
     """
+
+    for t_sample in training_set:
+        dist = numpy.linalg.norm(sample[0]-t_sample[0])
+
+
+
 
     pass
