@@ -18,9 +18,6 @@ def main():
     -get 1000 CR-positive examples, and 1000 non CR examples.
         -the non CR examples should include bright patches from img1
     -save these in a pickle
-
-
-
     """
     data_dir = "/misc/vlgscratch1/FergusGroup/abf277/hst"
 
