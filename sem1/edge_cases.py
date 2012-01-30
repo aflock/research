@@ -80,7 +80,7 @@ def main(n):
         if np.size(slice) == n*n:
             print "found %s suspects" % count
             med = np.median(slice)
-            plt.imsave('%s/sub_%s%s.png' % (data_dir, i, j), slice, cmap=cm.gray, vmin=med-70, vmax=med+70)
+            plt.imsave('%s/sub_%s_%s.png' % (data_dir, i, j), slice, cmap=cm.gray, vmin=med-70, vmax=med+70)
         count += 1
 
 if __name__ == '__main__':
