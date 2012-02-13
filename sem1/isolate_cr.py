@@ -74,15 +74,15 @@ def main(n , thresh, sub_thresh, orig=None):
 
 
     #plt.hist(sub_o, bins = 200,  range = (2000, 10000), log=True)
-    plt.hist(sub_o, bins = 200,  log=True)
-    return
+    #plt.hist(sub_o, bins = 200,  log=True)
+    #return
 
     print "max: ", np.max(sub_data)
     print "min: ", np.min(sub_data)
     print "med: ", np.median(sub_data)
 
     #plt.imshow(sub_data, cmap=cm.gray, vmin=mad-70, vmax=mad+70)
-    #return
+    return
     #plt.imshow(l, cmap=cm.gray, vmin=mad-70, vmax=mad+70)
 
     #a smaller image to test on

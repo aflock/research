@@ -105,8 +105,8 @@ def main(epsilon):
     minImg = interpoint.__call__(np.arange(image1[0].size)+minShift[0], np.arange(image1[0].size)+minShift[1])
     sub = (minImg - image2)
 
-    pickle.dump(result, open("%sshift_results_%s_%s.p" % (data_dir, epsilon, errorMethod), "wb"))
-    pickle.dump(sub, open("%sdiffedpic_%s_%s.p" % (data_dir, epsilon, errorMethod), "wb"))
+    pickle.dump(result, open("%sshift_results_%s_%s.p" % (data_dir, epsilon), "wb"))
+    pickle.dump(sub, open("%sdiffedpic_%s_%s.p" % (data_dir, epsilon), "wb"))
 
     median = np.median(minImg- image2)
 
