@@ -7,7 +7,7 @@ Author: AFlock
 Description: retrieve samples from a diff'd image, pickle them.
 '''
 
-import sys, os, pickle
+import os, pickle
 import pyfits            as pft
 import numpy             as np
 import matplotlib.cm     as cm
@@ -122,11 +122,13 @@ def main(options, args):
 
     #To keep track of CR-positive samples
     sample_count = 0
+    cr_coords = []
+    positive_samples = []
 
     #Find Cosmic Rays!
     for row_num, row in enumerate(subtracted_image):
         for p_num, pixel in enumerate(row):
-            if pixel > 200 and p_num > p/2 and row_num > p/2:
+            if pixel > 150 and p_num > p/2 and row_num > p/2:
                 slice_coords = ((row_num-p/2, row_num+p/2+2), (p_num-p/2, p_num+p/2+2))
                 print slice_coords
                 #print "CR found %s", pixel
@@ -140,22 +142,52 @@ def main(options, args):
                 im_u = subtracted_image[slice_coords[0][0]:slice_coords[0][1],
                         slice_coords[1][0]:slice_coords[1][1]]
 
-                if sample_count < 1000:
-                    grid[0].imshow(im_u, cmap=cm.gray, vmin=0, vmax=1000)
-                    grid[1].imshow(im_o, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
-                    grid[2].imshow(im_s, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
+                if sample_count < 1000: #only want to save 1000
+                    grid[0].imshow(im_u, cmap=cm.gray)#, vmin=0, vmax=sub_mad+70)
+                    grid[1].imshow(im_o, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
+                    grid[2].imshow(im_s, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
                     plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
 
                     #put the slice from the original into a nice format
                     formatted_sample = {'x': im_o.flatten(), 'y': 1}
                     print formatted_sample
-                    pickle.dump(formatted_sample,
-                            open('%s/samples/r_%s_%s.p' % (data_dir, row_num, p_num), "wb"))
+                    positive_samples.append(formatted_sample)
+                    #pickle.dump(formatted_sample, open('%s/samples/p_%s_%s.p' % (data_dir, row_num, p_num), "wb"))
                     sample_count += 1
 
-                #mark those coordinates as taken
-
+                # still want to mark those coordinates as taken
+                cr_coords.append((row_num, p_num))
                 return
+
+    #Now we want 1000 CR-negative samples -> get the highest pixels that were NOT marked as CRs
+    pixel_list = []
+    negative_samples = []
+    for row_num, row in enumerate(original_file_data):
+        for p_num, pixel in enumerate(row):
+            if (row_num, p_num) not in cr_coords:
+                pixel_list.append([(row_num, p_num), pixel])
+    top_1000 = sorted(pixel_list, key=lambda pair: pair[1])[-1000:]
+
+    for s in top_1000:
+        row_num, p_num = s[0]
+        #saving the sample as data
+        sl_co = ((row_num-p/2, row_num+p/2+2), (p_num-p/2, p_num+p/2+2))
+        slice = original_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
+        formatted_slice = {'x': slice.flatten(), 'y':0}
+        negative_samples.append(formatted_slice)
+        #pickle.dump(formatted_slice, open('%s/samples/n_%s_%s.p' % (data_dir, row_num, p_num), "wb"))
+
+        #saving the three images sliced as per the coordinates of the sample
+        im_o = original_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
+        im_s = match_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
+        im_u = subtracted_image[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
+
+        fig = plt.figure(1, (1., 3.))
+        grid = ImageGrid(fig, 111, nrows_ncols = (1, 3), axes_pad=0.1)
+        grid[0].imshow(im_u, cmap=cm.gray)#, vmin=0, vmax=sub_mad+70)
+        grid[1].imshow(im_o, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
+        grid[2].imshow(im_s, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
+        plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
 
 
 if __name__ == '__main__':
