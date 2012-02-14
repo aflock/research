@@ -39,6 +39,9 @@ def main(options, args):
     -get 1000 CR-positive examples, and 1000 non CR examples.
         -the non CR examples should include bright patches from img1
     -save these in a pickle
+
+    Data format for samples:
+    {x:[flattened array] y:1/0}
     """#}}}
     #get pixel width
     print options
@@ -66,7 +69,8 @@ def main(options, args):
     #if we haven't pre-calculated this, need to calculate best appropriate shife
     for file in os.listdir('.'):
         if "shifted_image" in file:
-            print "pre-shifted file detected"
+            print "pre-shifted file detected", file
+            break
     else:
         #need to calculate it and save
         #iterate through pixel shifts by .01 steps and seem how much 'error' is implied
@@ -78,15 +82,24 @@ def main(options, args):
                 np.arange(s), match_file_data, kx = 5, ky=5)
         for i in np.arange(-0.5, .5, 0.01):
             for j in np.arange(-0.5, .5, 0.01):
-                print "%s :: %s" % (i, j)
                 target = interpolation.__call__(np.arange(s)+i, np.arange(s)+j)
                 diff = errorWise(target, original_file_data, mad, 1)
                 if diff < min_diff:
+                    print "%s :: %s" % (i, j)
                     min_diff = diff
                     min_shift[0] = i
                     min_shift[1] = j
         shifted_image = interpolation.__call__(np.arange(s)+min_shift[0], np.arange(s)+min_shift[1])
         #pickle the shifted image so we don't need to calculate it again
+        print "best shift was : ", min_shift
+        pickle.dump(shifted_image, open("shifted_image_%s.p" % (match_file_path[1:10]), "wb"))
+
+    for file in os.listdir('.'):
+        if "shifted_image" in file:
+            shifted_image = pickle.load(open(file, "rb"))
+            break
+    else:
+        print "hmm no shifted image something's wrong"
 
     #subtract the images
     subtracted_image = original_file_data - shifted_image
@@ -100,6 +113,15 @@ def main(options, args):
     orig_absdif = np.absolute(original_file_data)
     orig_mad = np.median(orig_absdif)
     print "mad: ", sub_mad
+
+    """
+    #I'd like to see the image
+    plt.imshow(subtracted_image, cmap=cm.gray, vmin=0, vmax=sub_mad+200)
+    return
+    """
+
+    #To keep track of CR-positive samples
+    sample_count = 0
 
     #Find Cosmic Rays!
     for row_num, row in enumerate(subtracted_image):
@@ -118,27 +140,27 @@ def main(options, args):
                 im_u = subtracted_image[slice_coords[0][0]:slice_coords[0][1],
                         slice_coords[1][0]:slice_coords[1][1]]
 
-                grid[0].imshow(im_u, cmap=cm.gray, vmin=0, vmax=1000)
-                grid[1].imshow(im_o, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
-                grid[2].imshow(im_s, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
-                plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
-                return
+                if sample_count < 1000:
+                    grid[0].imshow(im_u, cmap=cm.gray, vmin=0, vmax=1000)
+                    grid[1].imshow(im_o, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
+                    grid[2].imshow(im_s, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
+                    plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
 
-    """
-    plt.imshow(subtracted_image, cmap=cm.gray, vmin=0, vmax=mad+700)
-    plt.imshow(original_file_data, cmap=cm.gray, vmin=0, vmax=mad+700)
-    plt.imshow(match_file_data, cmap=cm.gray, vmin=0, vmax=mad+700)
-    for row in subtracted_image:
-        for pixel in row:
-            if pixel > 50:
-                #print "CR found %s", pixel
-                pass
-    """
+                    #put the slice from the original into a nice format
+                    formatted_sample = {'x': im_o.flatten(), 'y': 1}
+                    print formatted_sample
+                    pickle.dump(formatted_sample,
+                            open('%s/samples/r_%s_%s.p' % (data_dir, row_num, p_num), "wb"))
+                    sample_count += 1
+
+                #mark those coordinates as taken
+
+                return
 
 
 if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-p", "--pixel", dest="pixel",
-            help ="how wide in pixels should the samples be", default=20)
+            help ="how wide in pixels should the samples be", default=9)
     (options, args) = parser.parse_args()
     main(options, args)
