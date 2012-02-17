@@ -145,7 +145,7 @@ def main(options, args):
         for p_num, pixel in enumerate(row):
             in_bounds = p_num > p/2 and row_num > p/2 and row_num < s-(p/2) and p_num < s-(p/2)
             if pixel > 200 and in_bounds:
-                slice_coords = ((row_num-p/2, row_num+p/2+2), (p_num-p/2, p_num+p/2+2))
+                slice_coords = ((row_num-p/2, row_num+p/2+1), (p_num-p/2, p_num+p/2+1))
                 #print "CR found %s", pixel
                 """
                 fig = plt.figure(1, (1., 3.))
@@ -194,7 +194,7 @@ def main(options, args):
     for s in top_1000:
         row_num, p_num = s[0]
         #saving the sample as data
-        sl_co = ((row_num-p/2, row_num+p/2+2), (p_num-p/2, p_num+p/2+2))
+        sl_co = ((row_num-p/2, row_num+p/2+1), (p_num-p/2, p_num+p/2+1))
         print sl_co
         slice = original_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
         formatted_slice = {'x': slice.flatten(), 'y':0}

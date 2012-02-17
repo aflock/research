@@ -16,6 +16,12 @@ data_dir = "/misc/vlgscratch1/FergusGroup/abf277/hst"
 neg_samples = pickle.load(open("%s/samples/negative.p" % data_dir,"rb"))
 pos_samples = pickle.load(open("%s/samples/positive.p" % data_dir,"rb"))
 samples = neg_samples + pos_samples
+#sanitize for incorrectly shaped samples
+for s in samples:
+    if s['x'].size is not 81:
+        print s['x'].size
+        print "removing sample : \n", s
+        samples.remove(s)
 shuffle(samples)
 num_s = len(samples)
 training_set = samples[:num_s/2]
