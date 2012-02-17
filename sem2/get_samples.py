@@ -104,6 +104,21 @@ def main(options, args):
     #subtract the images
     subtracted_image = original_file_data - shifted_image
 
+    #hacky way to see distortion stats#{{{
+    """
+    dist_sec = subtracted_image[1000:1060, 1010:1070]
+
+    print "med: ", np.median(dist_sec)
+    m =  np.median(dist_sec)
+    print "max: ", np.max(dist_sec)
+    print "min: ", np.min(dist_sec)
+    plt.imshow(dist_sec, cmap=cm.gray, vmin = m-200, vmax = m+200)
+    plt.colorbar()
+    return
+
+    """
+    #end hax#}}}
+
     print "Subtracted image stats"
     print "med: ", np.median(subtracted_image)
     print "max: ", np.max(subtracted_image)
@@ -128,36 +143,41 @@ def main(options, args):
     #Find Cosmic Rays!
     for row_num, row in enumerate(subtracted_image):
         for p_num, pixel in enumerate(row):
-            if pixel > 150 and p_num > p/2 and row_num > p/2:
+            in_bounds = p_num > p/2 and row_num > p/2 and row_num < s-(p/2) and p_num < s-(p/2)
+            if pixel > 200 and in_bounds:
                 slice_coords = ((row_num-p/2, row_num+p/2+2), (p_num-p/2, p_num+p/2+2))
-                print slice_coords
                 #print "CR found %s", pixel
+                """
                 fig = plt.figure(1, (1., 3.))
                 grid = ImageGrid(fig, 111, nrows_ncols = (1, 3), axes_pad=0.1)
 
-                im_o = original_file_data[slice_coords[0][0]:slice_coords[0][1],
-                        slice_coords[1][0]:slice_coords[1][1]]
                 im_s = match_file_data[slice_coords[0][0]:slice_coords[0][1],
                         slice_coords[1][0]:slice_coords[1][1]]
                 im_u = subtracted_image[slice_coords[0][0]:slice_coords[0][1],
                         slice_coords[1][0]:slice_coords[1][1]]
+                """
 
                 if sample_count < 1000: #only want to save 1000
+                    print slice_coords, sample_count
+                    im_o = original_file_data[slice_coords[0][0]:slice_coords[0][1],
+                            slice_coords[1][0]:slice_coords[1][1]]
+                    """#{{{
                     grid[0].imshow(im_u, cmap=cm.gray)#, vmin=0, vmax=sub_mad+70)
                     grid[1].imshow(im_o, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
                     grid[2].imshow(im_s, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
-                    plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
+                    #plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
+                    """#}}}
 
                     #put the slice from the original into a nice format
                     formatted_sample = {'x': im_o.flatten(), 'y': 1}
-                    print formatted_sample
+                    #print formatted_sample
                     positive_samples.append(formatted_sample)
-                    #pickle.dump(formatted_sample, open('%s/samples/p_%s_%s.p' % (data_dir, row_num, p_num), "wb"))
                     sample_count += 1
 
+                if sample_count == 1000:
+                    break
                 # still want to mark those coordinates as taken
                 cr_coords.append((row_num, p_num))
-                return
 
     #Now we want 1000 CR-negative samples -> get the highest pixels that were NOT marked as CRs
     pixel_list = []
@@ -165,19 +185,23 @@ def main(options, args):
     for row_num, row in enumerate(original_file_data):
         for p_num, pixel in enumerate(row):
             if (row_num, p_num) not in cr_coords:
+                print "add to poss neg", row_num, p_num
                 pixel_list.append([(row_num, p_num), pixel])
+    print "pre sort"
     top_1000 = sorted(pixel_list, key=lambda pair: pair[1])[-1000:]
 
+    print "Negative sample gathering"
     for s in top_1000:
         row_num, p_num = s[0]
         #saving the sample as data
         sl_co = ((row_num-p/2, row_num+p/2+2), (p_num-p/2, p_num+p/2+2))
+        print sl_co
         slice = original_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
         formatted_slice = {'x': slice.flatten(), 'y':0}
         negative_samples.append(formatted_slice)
-        #pickle.dump(formatted_slice, open('%s/samples/n_%s_%s.p' % (data_dir, row_num, p_num), "wb"))
 
         #saving the three images sliced as per the coordinates of the sample
+        """#{{{
         im_o = original_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
         im_s = match_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
         im_u = subtracted_image[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
@@ -187,7 +211,19 @@ def main(options, args):
         grid[0].imshow(im_u, cmap=cm.gray)#, vmin=0, vmax=sub_mad+70)
         grid[1].imshow(im_o, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
         grid[2].imshow(im_s, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
-        plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
+        #plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
+        """#}}}
+
+    #now dump all the samples together
+    print negative_samples[0:3]
+    print positive_samples[0:3]
+
+    print "pickling %s negative samples" % len(negative_samples)
+    print "pickling %s positive samples" % len(positive_samples)
+
+    pickle.dump(negative_samples, open("%s/samples/negative.p" % data_dir, "wb"))
+    pickle.dump(positive_samples, open("%s/samples/positive.p" % data_dir, "wb"))
+
 
 
 if __name__ == '__main__':

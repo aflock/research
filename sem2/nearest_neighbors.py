@@ -7,13 +7,21 @@ Description: Nearest neighbors algorithm for classification of Cosmic Ray pixels
 '''
 
 #imports
-import sys, os
 import numpy as np
 from random import shuffle
 import pickle
 
 #load samples
-# TODO: fill this in plz VV (01/29/12, 21:42, AFlock)
+data_dir = "/misc/vlgscratch1/FergusGroup/abf277/hst"
+neg_samples = pickle.load(open("%s/samples/negative.p" % data_dir,"rb"))
+pos_samples = pickle.load(open("%s/samples/positive.p" % data_dir,"rb"))
+samples = neg_samples + pos_samples
+shuffle(samples)
+num_s = len(samples)
+training_set = samples[:num_s/2]
+remainder = samples[num_s/2:]
+validation_set = remainder[:len(remainder)/6]
+test_set = remainder[len(remainder)/6:]
 
 
 def main():
@@ -25,13 +33,13 @@ def main():
         k_scores[k] = 0
         for v_sample in validation_set:
             NN = nearest_neighbors(v_sample, k)
-            votes_for_CR = sum([1 for x in NN if x[1] is 1])
+            votes_for_CR = sum([1 for x in NN if x['y'] is 1])
             if votes_for_CR > k/2:
                 cr_consensus = 1
             else:
                 cr_consensus = 0
 
-            true_answer = v_sample[1]
+            true_answer = v_sample['y']
             if true_answer == cr_consensus:
                 k_scores[k] +=1
     print k_scores
@@ -46,7 +54,7 @@ def nearest_neighbors(sample, k):
     for index, t_sample in enumerate(training_set):
         #print "t sample is:" , t_sample
         # TODO: might this be done faster? (01/30/12, 11:42, AFlock)
-        dist = np.linalg.norm(sample[0]-t_sample[0])
+        dist = np.linalg.norm(sample['x']-t_sample['x'])
         scores[index] = dist
 
     list =  sorted(range(len(training_set)), key=scores.__getitem__)
@@ -58,7 +66,7 @@ def nearest_neighbors(sample, k):
 if __name__ == '__main__':
     #DATA_FILE = open("./data.p", "rb")
     #samples = pickle.load(DATA_FILE)
-    samples = [
+    samples = [#{{{
             (np.array([1,2,3,1,5,6,0,1,204,6,23,6,2,1,4,6,78,2,1,12,4,5,7,3,1,21,344,2,1,2,3,45,6,67]), 1),
             (np.array([1,2,3,1,24,6,0,1,2015,6,23,6,2,1,4,6,78,2,1,12,4,5,7,3,1,21,34,2,1,2,3,5,6,67]), 0),
             (np.array([1,5,3,-1,5,9,0,2,5,31,253,6,2,169,4,6,78,2,1,12,4,5,7,3,1,21,34,2,1,24,3,-8,6,67]), 1),
@@ -86,12 +94,8 @@ if __name__ == '__main__':
             (np.array([1,2,19,1,-24,14,0,1,143,6,23,16,19,1,44,6,78,151,1,12,4,16,7,43,1,22,344,2,1,-9,3,95,6,51]), 1),
             (np.array([1,2,19,1,-2,14,0,1,143,46,23,-34,19,1,544,6,785,11,1,12,-8,16,7,3,91,22,34,2,1,-9,3,5,6,51]), 1),
             (np.array([1,2,19,51,-25,145,0,1,143,65,28,6,19,51,4,6,78,1551,1,12,4,16,7,3,1,22,34,2,1,-9,3,95,6,51]), 1)
-            ]
+            ]#}}}
+
     print "start"
-    shuffle(samples)
-    num_s = len(samples)
-    training_set = samples[:num_s/2]
-    remainder = samples[num_s/2:]
-    validation_set = remainder[:len(remainder)/6]
-    test_set = remainder[len(remainder)/6:]
     main()
+
