@@ -6,15 +6,15 @@ File: get_samples.py
 Author: AFlock
 Description: retrieve samples from a diff'd image, pickle them.
 '''
-
 import os, pickle
+import datetime
 import pyfits            as pft
 import numpy             as np
 import matplotlib.cm     as cm
 import matplotlib.pyplot as plt
 import scipy.interpolate as intpl
 from optparse                import OptionParser
-from mpl_toolkits.axes_grid1 import ImageGrid
+#from mpl_toolkits.axes_grid1 import ImageGrid
 
 data_dir = "/misc/vlgscratch1/FergusGroup/abf277/hst"
 xshift = 0.1
@@ -147,7 +147,7 @@ def main(options, args):
             if pixel > 200 and in_bounds:
                 slice_coords = ((row_num-p/2, row_num+p/2+1), (p_num-p/2, p_num+p/2+1))
                 #print "CR found %s", pixel
-                """
+                """#{{{
                 fig = plt.figure(1, (1., 3.))
                 grid = ImageGrid(fig, 111, nrows_ncols = (1, 3), axes_pad=0.1)
 
@@ -155,7 +155,7 @@ def main(options, args):
                         slice_coords[1][0]:slice_coords[1][1]]
                 im_u = subtracted_image[slice_coords[0][0]:slice_coords[0][1],
                         slice_coords[1][0]:slice_coords[1][1]]
-                """
+                """#}}}
 
                 if sample_count < 1000: #only want to save 1000
                     print slice_coords, sample_count
@@ -180,9 +180,12 @@ def main(options, args):
                 cr_coords.append((row_num, p_num))
 
     #Now we want 1000 CR-negative samples -> get the highest pixels that were NOT marked as CRs
+    #first construct a false image with the Cosmic rays subtracted out.
+    #this is essentially the opposite of "subtracted image", thus it is original-subtracted
+    no_cr_img = original_file_data - subtracted_image
     pixel_list = []
     negative_samples = []
-    for row_num, row in enumerate(original_file_data):
+    for row_num, row in enumerate(no_cr_img):
         for p_num, pixel in enumerate(row):
             if (row_num, p_num) not in cr_coords:
                 print "add to poss neg", row_num, p_num
@@ -221,8 +224,8 @@ def main(options, args):
     print "pickling %s negative samples" % len(negative_samples)
     print "pickling %s positive samples" % len(positive_samples)
 
-    pickle.dump(negative_samples, open("%s/samples/negative.p" % data_dir, "wb"))
-    pickle.dump(positive_samples, open("%s/samples/positive.p" % data_dir, "wb"))
+    pickle.dump(negative_samples, open("%s/samples/negative_%s.p" % (data_dir, datetime.datetime.now().strftime("%Y-%m-%d")), "wb"))
+    pickle.dump(positive_samples, open("%s/samples/positive_%s.p" % (data_dir,datetime.datetime.now().strftime("%Y-%m-%d")), "wb"))
 
 
 
