@@ -8,13 +8,14 @@ Description: retrieve samples from a diff'd image, pickle them.
 '''
 import os, pickle
 import datetime
+import copy
 import pyfits            as pft
 import numpy             as np
 import matplotlib.cm     as cm
 import matplotlib.pyplot as plt
 import scipy.interpolate as intpl
 from optparse                import OptionParser
-#from mpl_toolkits.axes_grid1 import ImageGrid
+from mpl_toolkits.axes_grid import ImageGrid
 
 data_dir = "/misc/vlgscratch1/FergusGroup/abf277/hst"
 xshift = 0.1
@@ -147,45 +148,61 @@ def main(options, args):
             if pixel > 200 and in_bounds:
                 slice_coords = ((row_num-p/2, row_num+p/2+1), (p_num-p/2, p_num+p/2+1))
                 #print "CR found %s", pixel
-                """#{{{
-                fig = plt.figure(1, (1., 3.))
+                fig = plt.figure(2, (5., 2.))
                 grid = ImageGrid(fig, 111, nrows_ncols = (1, 3), axes_pad=0.1)
-
-                im_s = match_file_data[slice_coords[0][0]:slice_coords[0][1],
-                        slice_coords[1][0]:slice_coords[1][1]]
-                im_u = subtracted_image[slice_coords[0][0]:slice_coords[0][1],
-                        slice_coords[1][0]:slice_coords[1][1]]
-                """#}}}
 
                 if sample_count < 1000: #only want to save 1000
                     print slice_coords, sample_count
-                    im_o = original_file_data[slice_coords[0][0]:slice_coords[0][1],
-                            slice_coords[1][0]:slice_coords[1][1]]
-                    """#{{{
-                    grid[0].imshow(im_u, cmap=cm.gray)#, vmin=0, vmax=sub_mad+70)
-                    grid[1].imshow(im_o, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
-                    grid[2].imshow(im_s, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
-                    #plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
-                    """#}}}
+
+                    #want 3 images:
+                    #  -the subtracted image that we get the CR from (the identifier)
+                    #  -the original image at those coordinates      (the original)
+                    #  -the min of the two images for reference      (the min_reference)
+                    sl_original = original_file_data[slice_coords[0][0]:slice_coords[0][1], slice_coords[1][0]:slice_coords[1][1]]
+                    sl_identifer = subtracted_image[slice_coords[0][0]:slice_coords[0][1], slice_coords[1][0]:slice_coords[1][1]]
+                    sl_match = shifted_image[slice_coords[0][0]:slice_coords[0][1], slice_coords[1][0]:slice_coords[1][1]]
+
+                    #take the min of the match and the original
+                    sl_min_reference = copy.deepcopy(sl_match)
+                    for i, row in enumerate(sl_match):
+                        for j, jval in enumerate(row):
+                            sl_min_reference[i][j] = min(jval, sl_original[i][j])
+
+
+                    grid[0].imshow(sl_identifer, cmap=cm.gray, vmin=0, vmax=sub_mad+70)
+                    grid[1].imshow(sl_original, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
+                    grid[2].imshow(sl_min_reference, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
+                    plt.savefig('%s/samples/pos3img%s_%s.png' % (data_dir, row_num, p_num))
 
                     #put the slice from the original into a nice format
-                    formatted_sample = {'x': im_o.flatten(), 'y': 1}
+                    formatted_sample = {'x': sl_original.flatten(), 'y': 1, 'loc': (row_num, p_num)}
                     #print formatted_sample
                     positive_samples.append(formatted_sample)
                     sample_count += 1
 
                 if sample_count == 1000:
                     break
-                # still want to mark those coordinates as taken
+                # still want to mark those coordinates as taken, along with the surrounding ones
+                # this is to prevent cr-positive bleedover being marked as cr-negative
                 cr_coords.append((row_num, p_num))
+                cr_coords.append((row_num+1, p_num-1))
+                cr_coords.append((row_num+1, p_num+1))
+                cr_coords.append((row_num, p_num+1))
+                cr_coords.append((row_num, p_num-1))
+                cr_coords.append((row_num+1, p_num))
+                cr_coords.append((row_num-1, p_num))
+                cr_coords.append((row_num-1, p_num-1))
+                cr_coords.append((row_num-1, p_num+1))
+
 
     #Now we want 1000 CR-negative samples -> get the highest pixels that were NOT marked as CRs
     #first construct a false image with the Cosmic rays subtracted out.
     #this is essentially the opposite of "subtracted image", thus it is original-subtracted
+    # (no longer doing this)
     no_cr_img = original_file_data - subtracted_image
     pixel_list = []
     negative_samples = []
-    for row_num, row in enumerate(no_cr_img):
+    for row_num, row in enumerate(original_file_data):
         for p_num, pixel in enumerate(row):
             if (row_num, p_num) not in cr_coords:
                 print "add to poss neg", row_num, p_num
@@ -197,25 +214,28 @@ def main(options, args):
     for s in top_1000:
         row_num, p_num = s[0]
         #saving the sample as data
-        sl_co = ((row_num-p/2, row_num+p/2+1), (p_num-p/2, p_num+p/2+1))
-        print sl_co
-        slice = original_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
-        formatted_slice = {'x': slice.flatten(), 'y':0}
+        slice_coords = ((row_num-p/2, row_num+p/2+1), (p_num-p/2, p_num+p/2+1))
+        print slice_coords
+        slice = original_file_data[slice_coords[0][0]:slice_coords[0][1], slice_coords[1][0]:slice_coords[1][1]]
+        formatted_slice = {'x': slice.flatten(), 'y':0, 'loc': (row_num, p_num)}
         negative_samples.append(formatted_slice)
 
         #saving the three images sliced as per the coordinates of the sample
-        """#{{{
-        im_o = original_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
-        im_s = match_file_data[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
-        im_u = subtracted_image[sl_co[0][0]:sl_co[0][1], sl_co[1][0]:sl_co[1][1]]
+        sl_original = original_file_data[slice_coords[0][0]:slice_coords[0][1], slice_coords[1][0]:slice_coords[1][1]]
+        sl_identifer = subtracted_image[slice_coords[0][0]:slice_coords[0][1], slice_coords[1][0]:slice_coords[1][1]]
+        sl_match = shifted_image[slice_coords[0][0]:slice_coords[0][1], slice_coords[1][0]:slice_coords[1][1]]
 
-        fig = plt.figure(1, (1., 3.))
-        grid = ImageGrid(fig, 111, nrows_ncols = (1, 3), axes_pad=0.1)
-        grid[0].imshow(im_u, cmap=cm.gray)#, vmin=0, vmax=sub_mad+70)
-        grid[1].imshow(im_o, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
-        grid[2].imshow(im_s, cmap=cm.gray)#, vmin=orig_mad-70, vmax=orig_mad+70)
-        #plt.savefig('%s/samples/%s_%s.png' % (data_dir, row_num, p_num))
-        """#}}}
+        #take the min of the match and the original
+        sl_min_reference = copy.deepcopy(sl_match)
+        for i, row in enumerate(sl_match):
+            for j, jval in enumerate(row):
+                sl_min_reference[i][j] = min(jval, sl_original[i][j])
+
+
+        grid[0].imshow(sl_identifer, cmap=cm.gray, vmin=0, vmax=sub_mad+70)
+        grid[1].imshow(sl_original, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
+        grid[2].imshow(sl_min_reference, cmap=cm.gray, vmin=orig_mad-70, vmax=orig_mad+70)
+        plt.savefig('%s/samples/neg3img%s_%s.png' % (data_dir, row_num, p_num))
 
     #now dump all the samples together
     print negative_samples[0:3]
